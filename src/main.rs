@@ -14,12 +14,9 @@ fn initialize() -> Result<(), io::Error> {
     let current_path = env::current_dir()?;
     println!("Current directory: {:?}", current_path);
     let mut commit = String::new();
-    // first line of commit will be the message
-    commit.push_str("initial commit");
-    commit.push_str("\n");
     let path = current_path.join("\\test");
     encrypt::visit_dirs(&path, &mut commit)?;
-    encrypt::store_commit(&commit)?;
+    encrypt::store_commit(&commit, "initial commit")?;
     println!("The commit looks like this: {}", commit);
     Ok(())
 

@@ -33,7 +33,7 @@ pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     Ok(())
 }
 
-pub fn store_commit(commit: &str) -> Result<(), io::Error> {
+pub fn store_commit(commit: &str, commit_message: &str) -> Result<(), io::Error> {
 
     let mut hasher = Sha256::new();
     hasher.update(commit.as_bytes());
@@ -57,7 +57,7 @@ pub fn store_commit(commit: &str) -> Result<(), io::Error> {
     let mut file = File::open(".vx/history.history")?;
     let mut existing_commits = String::new();
     file.read_to_string(&mut existing_commits)?;
-    let combined_data = format!("{}\n{}", hash, existing_commits);
+    let combined_data = format!("{}\t{}\n{}", commit_message, hash, existing_commits);
     println!("combined data {}", combined_data);
 
     let mut file = OpenOptions::new()
