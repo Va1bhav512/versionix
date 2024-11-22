@@ -1,4 +1,5 @@
 mod encrypt;
+mod decrypt;
 
 use std::fs::File;
 use std::io::{self,BufRead};
@@ -8,23 +9,31 @@ use std::fs::DirBuilder;
 use std::env;
 
 
-fn initialize() -> io::Result<()> {
+fn initialize() -> Result<(), io::Error> {
     initialize_directory()?;
     let current_path = env::current_dir()?;
     println!("Current directory: {:?}", current_path);
+    let mut commit = String::new();
+    // first line of commit will be the message
+    commit.push_str("initial commit");
+    commit.push_str("\n");
     let path = current_path.join("\\test");
-    encrypt::visit_dirs(&path)?;
+    encrypt::visit_dirs(&path, &mut commit)?;
+    encrypt::store_commit(&commit)?;
+    println!("The commit looks like this: {}", commit);
     Ok(())
 
 }
 
-fn initialize_directory() -> io::Result<()> {
+fn initialize_directory() -> Result<(), io::Error> {
     let mut builder = DirBuilder::new();
     builder.recursive(true);
     let path = Path::new(".vx");
     builder.create(path)?;
     builder.create(path.join("objects"))?;
     builder.create(path.join("tree"))?;
+    builder.create(path.join("commits"))?;
+    File::create(path.join("history.history"))?;
 
     Ok(())
 
@@ -56,6 +65,10 @@ fn main() {
             Command::new("init")
             .about("Initializes a .vx folder")
         )
+        .subcommand(
+            Command::new("log")
+            .about("View commit history")
+        )
         .get_matches();
         if let Some(matches) = cli.subcommand_matches("read") {
             if let Some(path) = matches.get_one::<String>("path") {
@@ -65,6 +78,11 @@ fn main() {
             match initialize() {
                 Ok(_) => println!("Successfully initialized!"),
                 Err(e) => eprintln!("Error creating directory! {}",e),
+            }
+        } else if let Some(_) = cli.subcommand_matches("log") {
+            match decrypt::read_commit_history() {
+                Ok(_) => println!("--End of history--"),
+                Err(e) => eprintln!("Error: {}", e),
             }
         }
 }
