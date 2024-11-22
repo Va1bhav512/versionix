@@ -66,6 +66,16 @@ fn main() {
             Command::new("log")
             .about("View commit history")
         )
+        .subcommand(
+            Command::new("rc")
+            .about("Reads a commit")
+            .arg(
+                Arg::new("path")
+                .help("path for reading")
+                .required(true)
+                .index(1)
+            )
+        )
         .get_matches();
         if let Some(matches) = cli.subcommand_matches("read") {
             if let Some(path) = matches.get_one::<String>("path") {
@@ -80,6 +90,13 @@ fn main() {
             match decrypt::read_commit_history() {
                 Ok(_) => println!("--End of history--"),
                 Err(e) => eprintln!("Error: {}", e),
+            }
+        } else if let Some(matches) = cli.subcommand_matches("rc") {
+            if let Some(path) = matches.get_one::<String>("path") {
+                match decrypt::read_commit(path) {
+                    Ok(_) => println!("--End of files--"),
+                    Err(e) => eprintln!("Error: {}", e),
+                }
             }
         }
 }
