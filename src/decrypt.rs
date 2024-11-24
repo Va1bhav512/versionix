@@ -34,7 +34,7 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
                     Some((tree_name, tree_hash)) => {
                         // make tree with name tree name and create all files inside it
                         // Visit this tree in .vx/tree/
-                        println!("Tree: {}", tree_name);
+                        // println!("Tree: {}", tree_name);
                         visit_tree(&tree_name, tree_hash)?;
 
                     }
@@ -74,16 +74,10 @@ fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
                     Some((file_or_folder_name, file_or_folder_hash)) => {
                         // Check whether file or folder and handle accordingly
                         if file_or_folder_name.starts_with("tree:") {
+
                             let folder_name = &file_or_folder_name[5..];
                             visit_tree(&folder_name, file_or_folder_hash)?;
-                        //let path = Path::new(&file_or_folder_name);
-                        //if path.is_dir() {
-                        //    if let Some(path_str) = path.to_str() {
-                        //        visit_tree(&path_str, file_or_folder_hash)?;
-                        //    } else {
-                        //        return Err(Error::new(ErrorKind::InvalidData, "Invalid file structure in tree!"));
-                        //    }
-                        //} else {
+
                         } else if file_or_folder_name.starts_with("file:") {
                         // Print the file name and then visit its hash
                         // Make a new file with name file name and contents will be written by
@@ -93,8 +87,8 @@ fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
                             file_path.push_str(&tree_name);
                             file_path.push_str("\\");
                             file_path.push_str(&file_name);
-                            println!("File: {}", file_name);
-                            println!("File path: {}", file_path);
+                            // println!("File: {}", file_name);
+                            // println!("File path: {}", file_path);
                             visit_file(&file_path, file_or_folder_hash)?;
                         }
                     }
@@ -125,17 +119,17 @@ fn visit_file(file_path: &str, file_hash: String) -> Result<(), io::Error> {
     let bytes = read(file_folder_file)?;
 
     let data = decompress_string(bytes);
-    println!("Decompressed successfully!");
+    // println!("Decompressed successfully!");
 
     let parent_dir = Path::new(file_path).parent();
 
     if let Some(parent) = parent_dir {
         create_dir_all(parent)?;
     }
-    println!("Parent directories successfully created if not available!");
+    // println!("Parent directories successfully created if not available!");
 
     let mut file = File::create(file_path)?;
-    println!("File created/overwritten successfully!");
+    // println!("File created/overwritten successfully!");
 
     file.write_all(data.as_bytes())?;
 

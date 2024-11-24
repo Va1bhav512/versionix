@@ -48,28 +48,9 @@ fn initialize_directory() -> Result<(), io::Error> {
 
 }
 
-fn read(path: &Path) {
-    let file = File::open(&path).expect("File not found!");
-    let reader = io::BufReader::new(file);
-    for line in reader.lines() {
-        let line = line.expect("Could not read file!");
-        println!("{}", line);
-    }
-}
-
 fn main() {
-    let cli = Command::new("vx")
+    let cli = Command::new("versionix")
         .about("vx version control system")
-        .subcommand(
-            Command::new("read")
-            .about("Reads a file")
-            .arg(
-                Arg::new("path")
-                .help("path for reading")
-                .required(true)
-                .index(1)
-            )
-        )
         .subcommand(
             Command::new("init")
             .about("Initializes a .vx folder")
@@ -99,11 +80,7 @@ fn main() {
             )
         )
         .get_matches();
-        if let Some(matches) = cli.subcommand_matches("read") {
-            if let Some(path) = matches.get_one::<String>("path") {
-                read(Path::new(path));
-            }
-        } else if let Some(_) = cli.subcommand_matches("init") {
+        if let Some(_) = cli.subcommand_matches("init") {
             match initialize() {
                 Ok(_) => println!("Successfully initialized!"),
                 Err(e) => eprintln!("Error creating directory! {}",e),
