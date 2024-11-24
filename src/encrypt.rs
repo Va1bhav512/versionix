@@ -6,6 +6,11 @@ use sha2::{Sha256, Digest};
 
 pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     println!("visting directories at: {:?}", dir);
+    if let Some(dir_str) = dir.to_str() {
+        commit.push_str(dir_str);
+        commit.push_str("\t");
+        // let dir_string = dir_str.to_string();
+    }
     let mut tree = String::new();
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
@@ -30,6 +35,7 @@ pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     store_tree(&tree,&hash)?;
     commit.push_str(&hash);
     commit.push_str("\n");
+    println!("commit: {}", commit);
     Ok(())
 }
 
@@ -79,10 +85,10 @@ fn hash_file(pathbuf: PathBuf, tree: &mut String) -> Result<(), io::Error> {
     }
     let mut hasher = Sha256::new();
     let mut file = File::open(path)?;
-    let metadata = "blob.";
+    // let metadata = "blob.";
 
     let mut object = String::new();
-    object.push_str(metadata);
+    // object.push_str(metadata);
 
     hasher.update(object.as_bytes());
 

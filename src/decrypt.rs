@@ -1,6 +1,7 @@
-use std::io::{self, Cursor, BufRead, BufReader, Error, ErrorKind};
+use std::io::{self, Cursor, BufRead, BufReader, Error, ErrorKind, Write};
 use zstd::stream::decode_all;
-use std::fs::{read, read_to_string, File};
+use std::fs::{read, read_to_string, File, create_dir_all};
+use std::path::Path;
 
 fn decompress_string(compressed_data: Vec<u8>) -> String {
     let decompressed = decode_all(Cursor::new(compressed_data)).unwrap();
@@ -28,9 +29,20 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
 
     for line in reader.lines() {
         match line {
-            Ok(tree_hash) => {
-                // Visit this tree in .vx/tree/
-                visit_tree(tree_hash)?;
+            Ok(tree_name_and_hash) => {
+                match split_string(&tree_name_and_hash) {
+                    Some((tree_name, tree_hash)) => {
+                        // make tree with name tree name and create all files inside it
+                        // Visit this tree in .vx/tree/
+                        println!("Tree: {}", tree_name);
+                        visit_tree(&tree_name, tree_hash)?;
+
+                    }
+                    None => {
+                        eprintln!("Something wrong with tree structure in commit! {}", commit);
+                        return Err(Error::new(ErrorKind::InvalidData, "Invalid file structure in commit!"));
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("Error reading line: {}", e);
@@ -41,7 +53,7 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn visit_tree(tree_hash: String) -> Result<(), io::Error> {
+fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
     let mut tree_folder: String = ".vx/tree/".to_string();
     tree_folder.push_str(&tree_hash.chars().take(2).collect::<String>());
     let mut tree_folder_file = tree_folder.clone();
@@ -61,8 +73,15 @@ fn visit_tree(tree_hash: String) -> Result<(), io::Error> {
                 match split_string(&file_name_and_hash) {
                     Some((file_name, file_hash)) => {
                         // Print the file name and then visit its hash
+                        // Make a new file with name file name and contents will be written by
+                        // visit_file
+                        let mut file_path = String::new();
+                        file_path.push_str(&tree_name);
+                        file_path.push_str("\\");
+                        file_path.push_str(&file_name);
                         println!("File: {}", file_name);
-                        visit_file(file_hash)?;
+                        println!("File path: {}", file_path);
+                        visit_file(&file_path, file_hash)?;
                     }
                     None => {
                         eprintln!("Some thing wrong with file structure in tree! {}", tree_hash);
@@ -80,7 +99,7 @@ fn visit_tree(tree_hash: String) -> Result<(), io::Error> {
 }
 
 
-fn visit_file(file_hash: String) -> Result<(), io::Error> {
+fn visit_file(file_path: &str, file_hash: String) -> Result<(), io::Error> {
     let mut file_folder: String = ".vx/objects/".to_string();
     file_folder.push_str(&file_hash.chars().take(2).collect::<String>());
     let mut file_folder_file = file_folder.clone();
@@ -91,8 +110,19 @@ fn visit_file(file_hash: String) -> Result<(), io::Error> {
     let bytes = read(file_folder_file)?;
 
     let data = decompress_string(bytes);
+    println!("Decompressed successfully!");
 
-    println!("{}",data);
+    let parent_dir = Path::new(file_path).parent();
+
+    if let Some(parent) = parent_dir {
+        create_dir_all(parent)?;
+    }
+    println!("Parent directories successfully created if not available!");
+
+    let mut file = File::create(file_path)?;
+    println!("File created/overwritten successfully!");
+
+    file.write_all(data.as_bytes())?;
 
     Ok(())
 }
