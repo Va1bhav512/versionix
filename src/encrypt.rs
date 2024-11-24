@@ -1,5 +1,5 @@
-use std::io::{self, Cursor, Read, Write};
-use std::fs::{self, File, create_dir_all, OpenOptions};
+use std::io::{self, Cursor, Read, Write, Error, ErrorKind};
+use std::fs::{File, create_dir_all, OpenOptions, read_dir};
 use std::path::{Path,PathBuf};
 use zstd::stream::encode_all;
 use sha2::{Sha256, Digest};
@@ -13,12 +13,21 @@ pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     }
     let mut tree = String::new();
     if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
+        for entry in read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
                 // function to call to do 5. of to-do.
+                //if let Some(parent) = path.parent() {
+                //    if let Some(folder_name) = parent.file_name() {
+                //        if let Some(folder_name_str) = folder_name.to_str() {
+                //            tree.push_str(folder_name_str);
+                //        }
+                //    }
+                //}
+                // visit_dirs(&path, commit)?;
                 println!("{:?} is a directory", path);
+                visit_inner_dirs(path, &mut tree)?;
             } else if path.is_file() {
                 // function to encrypt it.
                 println!("{:?} is a file, hashing:", path);
@@ -37,6 +46,56 @@ pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     commit.push_str("\n");
     println!("commit: {}", commit);
     Ok(())
+}
+
+fn visit_inner_dirs(pathbuf: PathBuf, parent_tree: &mut String) -> Result<(), io::Error> {
+    let dir = pathbuf.as_path();
+    println!("visiting inner directories at :{:?}", dir);
+    let mut tree = String::new();
+    if dir.is_dir() {
+        for entry in read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                visit_inner_dirs(path.clone(), &mut tree)?;
+            } else if path.is_file() {
+                println!("{:?} is a file, hashing", path);
+                hash_file(path.clone(), &mut tree)?;
+            }
+        }
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(tree.as_bytes());
+    let result = hasher.finalize();
+    let hash = format!("{:x}", result);
+    store_tree(&tree,&hash)?;
+
+    //if let Some(parent) = dir.parent() {
+    //    if let Some(folder_name) = parent.file_name() {
+    //        if let Some(folder_name_str) = folder_name.to_str() {
+    //            println!("HEREEEEEEEEEEEEEEEEEEEEEE {}", folder_name_str);
+    //            parent_tree.push_str(folder_name_str);
+    //        } else {
+    //          return Err(Error::new(ErrorKind::InvalidData, "Path name for inner tree not valid!"));
+    //        }
+    //    } else {
+    //      return Err(Error::new(ErrorKind::InvalidData, "Path name for inner tree not valid!"));
+    //    }
+    //}
+    
+    if let Some(path_str) = dir.to_str() {
+        parent_tree.push_str("tree:");
+        parent_tree.push_str(path_str);
+    } else {
+        return Err(Error::new(ErrorKind::InvalidData, "Path name for inner tree not valid!"));
+    }
+
+    parent_tree.push_str("\t");
+    parent_tree.push_str(&hash);
+    parent_tree.push_str("\n");
+    println!("parent_tree: {}", parent_tree);
+    Ok(())
+
 }
 
 pub fn store_commit(commit: &str, commit_message: &str) -> Result<(), io::Error> {
@@ -79,6 +138,7 @@ fn hash_file(pathbuf: PathBuf, tree: &mut String) -> Result<(), io::Error> {
     let path = pathbuf.as_path();
     if let Some(file_name) = path.file_name() {
         if let Some(file_name_str) = file_name.to_str() {
+            tree.push_str("file:");
             tree.push_str(&file_name_str);
             tree.push_str("\t");
         }

@@ -67,21 +67,36 @@ fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
 
     for line in reader.lines() {
         match line {
-            Ok(file_name_and_hash) => {
+            Ok(file_or_folder_name_and_hash) => {
                 // Print file name (before \t) and then read the file and print its contents
 
-                match split_string(&file_name_and_hash) {
-                    Some((file_name, file_hash)) => {
+                match split_string(&file_or_folder_name_and_hash) {
+                    Some((file_or_folder_name, file_or_folder_hash)) => {
+                        // Check whether file or folder and handle accordingly
+                        if file_or_folder_name.starts_with("tree:") {
+                            let folder_name = &file_or_folder_name[5..];
+                            visit_tree(&folder_name, file_or_folder_hash)?;
+                        //let path = Path::new(&file_or_folder_name);
+                        //if path.is_dir() {
+                        //    if let Some(path_str) = path.to_str() {
+                        //        visit_tree(&path_str, file_or_folder_hash)?;
+                        //    } else {
+                        //        return Err(Error::new(ErrorKind::InvalidData, "Invalid file structure in tree!"));
+                        //    }
+                        //} else {
+                        } else if file_or_folder_name.starts_with("file:") {
                         // Print the file name and then visit its hash
                         // Make a new file with name file name and contents will be written by
                         // visit_file
-                        let mut file_path = String::new();
-                        file_path.push_str(&tree_name);
-                        file_path.push_str("\\");
-                        file_path.push_str(&file_name);
-                        println!("File: {}", file_name);
-                        println!("File path: {}", file_path);
-                        visit_file(&file_path, file_hash)?;
+                            let file_name = &file_or_folder_name[5..];
+                            let mut file_path = String::new();
+                            file_path.push_str(&tree_name);
+                            file_path.push_str("\\");
+                            file_path.push_str(&file_name);
+                            println!("File: {}", file_name);
+                            println!("File path: {}", file_path);
+                            visit_file(&file_path, file_or_folder_hash)?;
+                        }
                     }
                     None => {
                         eprintln!("Some thing wrong with file structure in tree! {}", tree_hash);
