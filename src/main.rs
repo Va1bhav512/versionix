@@ -2,7 +2,7 @@ mod encrypt;
 mod decrypt;
 
 use std::fs::File;
-use std::io::{self,BufRead};
+use std::io::{self};
 use std::path::Path;
 use clap::{Arg, Command};
 use std::fs::DirBuilder;
@@ -14,8 +14,8 @@ fn initialize() -> Result<(), io::Error> {
     let current_path = env::current_dir()?;
     println!("Current directory: {:?}", current_path);
     let mut commit = String::new();
-    let path = current_path.join("\\test");
-    // let path = current_path;
+    // let path = current_path.join("\\test");
+    let path = current_path;
     encrypt::visit_dirs(&path, &mut commit)?;
     encrypt::store_commit(&commit, "initial commit")?;
     println!("The commit looks like this: {}", commit);
@@ -26,8 +26,8 @@ fn initialize() -> Result<(), io::Error> {
 fn commit(message: &str) -> Result<(), io::Error> {
     let current_path = env::current_dir()?;
     let mut commit = String::new();
-    let path = current_path.join("\\test");
-    // let path = current_path;
+    // let path = current_path.join("\\test");
+    let path = current_path;
     encrypt::visit_dirs(&path, &mut commit)?;
     encrypt::store_commit(&commit, &message)?;
     println!("The commit looks like this: {}", commit);

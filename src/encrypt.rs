@@ -151,7 +151,7 @@ fn hash_file(pathbuf: PathBuf, tree: &mut String) -> Result<(), io::Error> {
     // println!("Appending hash to tree object:");
     tree.push_str(&hash);
     tree.push_str("\n");
-    println!("tree: {}", tree);
+    // println!("tree: {}", tree);
 
 
     store(object, hash)?;
