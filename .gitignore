@@ -1,1 +1,5 @@
 /target
+/benchmarking/bench_data
+/benchmarking/benchmarking.csv
+/benchmarking/results.csv
+To_Do.md
