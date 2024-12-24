@@ -1,14 +1,15 @@
-use std::io::{self, Cursor, Read, Write, Error, ErrorKind};
+use std::io::{self, Read, Write, Error, ErrorKind};
 use std::fs::{File, create_dir_all, OpenOptions, read_dir};
 use std::path::{Path,PathBuf};
-use zstd::stream::encode_all;
+use snap::write::FrameEncoder;
+// use zstd::stream::write;
 use sha2::{Sha256, Digest};
 
 pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     // println!("visting directories at: {:?}", dir);
     if let Some(dir_str) = dir.to_str() {
         commit.push_str(dir_str);
-        commit.push_str("\t");
+        commit.push('\t');
         // let dir_string = dir_str.to_string();
     }
     let mut tree = String::new();
@@ -35,7 +36,7 @@ pub fn visit_dirs(dir: &Path, commit: &mut String) -> Result<(), io::Error> {
     let hash = format!("{:x}", result);
     store_tree(&tree,&hash)?;
     commit.push_str(&hash);
-    commit.push_str("\n");
+    commit.push('\n');
     // println!("commit: {}", commit);
     Ok(())
 }
@@ -69,9 +70,9 @@ fn visit_inner_dirs(pathbuf: PathBuf, parent_tree: &mut String) -> Result<(), io
         return Err(Error::new(ErrorKind::InvalidData, "Path name for inner tree not valid!"));
     }
 
-    parent_tree.push_str("\t");
+    parent_tree.push('\t');
     parent_tree.push_str(&hash);
-    parent_tree.push_str("\n");
+    parent_tree.push('\n');
     // println!("parent_tree: {}", parent_tree);
     Ok(())
 
@@ -94,7 +95,7 @@ pub fn store_commit(commit: &str, commit_message: &str) -> Result<(), io::Error>
     let mut file = File::create(file_path)?;
 
     // println!("Writing commit to file:");
-    file.write_all(&commit.as_bytes())?;
+    file.write_all(commit.as_bytes())?;
 
     // Writing commit hash to history file
 
@@ -106,7 +107,7 @@ pub fn store_commit(commit: &str, commit_message: &str) -> Result<(), io::Error>
 
     let mut file = OpenOptions::new()
         .write(true)
-        .truncate(true)
+        // .truncate(true)
         .open(".vx/history.history")?;
 
     file.write_all(combined_data.as_bytes())?;
@@ -118,8 +119,8 @@ fn hash_file(pathbuf: PathBuf, tree: &mut String) -> Result<(), io::Error> {
     if let Some(file_name) = path.file_name() {
         if let Some(file_name_str) = file_name.to_str() {
             tree.push_str("file:");
-            tree.push_str(&file_name_str);
-            tree.push_str("\t");
+            tree.push_str(file_name_str);
+            tree.push('\t');
         }
     }
     let mut hasher = Sha256::new();
@@ -150,18 +151,17 @@ fn hash_file(pathbuf: PathBuf, tree: &mut String) -> Result<(), io::Error> {
     // println!("Now storing:");
     // println!("Appending hash to tree object:");
     tree.push_str(&hash);
-    tree.push_str("\n");
-    // println!("tree: {}", tree);
+    tree.push('\n');
 
 
-    store(object, hash)?;
+    store(&object, &hash)?;
 
     Ok(())
 }
 
 
 
-fn store(object: String, hash: String) -> Result<(), io::Error> {
+fn store(object: &str, hash: &str) -> Result<(), io::Error> {
     let first_two_chars: String = hash.chars().take(2).collect();
     let rest_of_chars: String = hash.chars().skip(2).collect();
     let path = format!(".vx/objects/{}",first_two_chars);
@@ -185,7 +185,7 @@ fn store(object: String, hash: String) -> Result<(), io::Error> {
     Ok(())
 
 }
-fn store_tree(tree: &String, hash: &String) -> Result<(), io::Error> {
+fn store_tree(tree: &String, hash: &str) -> Result<(), io::Error> {
     let first_two_chars: String = hash.chars().take(2).collect();
     let rest_of_chars: String = hash.chars().skip(2).collect();
     let path = format!(".vx/tree/{}",first_two_chars);
@@ -202,15 +202,18 @@ fn store_tree(tree: &String, hash: &String) -> Result<(), io::Error> {
 
     // println!("Writing tree to file:");
 
-    file.write_all(&tree.as_bytes())?;
+    file.write_all(tree.as_bytes())?;
 
     Ok(())
 }
 
 
-fn compress_string(input: String) -> Vec<u8> {
-    let compressed_data = encode_all(Cursor::new(input.as_bytes()), 3).unwrap();
-    compressed_data
+fn compress_string(input: &str) -> Vec<u8> {
+    //let mut encoder = write::Encoder::new(Vec::new(), 3).unwrap();
+    //encoder.write_all(input.as_bytes()).unwrap();
+    //encoder.finish().unwrap()
+    let mut encoder = FrameEncoder::new(Vec::new());
+    encoder.write_all(input.as_bytes()).expect("Failed to compress data");
+    encoder.into_inner().expect("Failed to finalize compression")
 }
-
 

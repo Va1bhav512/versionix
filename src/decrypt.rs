@@ -1,11 +1,20 @@
-use std::io::{self, Cursor, BufRead, BufReader, Error, ErrorKind, Write};
-use zstd::stream::decode_all;
+use std::io::{self, BufRead, BufReader, Error, ErrorKind, Write, Read};
+// use zstd::stream::read;
+// use std::io::Cursor
 use std::fs::{read, read_to_string, File, create_dir_all};
 use std::path::Path;
+use snap::read::FrameDecoder;
 
 fn decompress_string(compressed_data: Vec<u8>) -> String {
-    let decompressed = decode_all(Cursor::new(compressed_data)).unwrap();
-    String::from_utf8(decompressed).unwrap()
+    //let mut decoder = read::Decoder::new(Cursor::new(compressed_data)).unwrap();
+    //let mut decompressed = Vec::new();
+    //decoder.read_to_end(&mut decompressed).unwrap();
+    //
+    //String::from_utf8_lossy(&decompressed).to_string()
+    let mut decoder = FrameDecoder::new(&compressed_data[..]);
+    let mut decompressed_string = String::new();
+    decoder.read_to_string(&mut decompressed_string).expect("Failed to decompress data");
+    decompressed_string
 }
 
 pub fn read_commit_history() -> Result<(), io::Error> {
@@ -19,7 +28,7 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
     let mut commit_folder: String = ".vx/commits/".to_string();
     commit_folder.push_str(&commit.chars().take(2).collect::<String>());
     let mut commit_path = commit_folder.clone();
-    commit_path.push_str("/");
+    commit_path.push('/');
     commit_path.push_str(&commit.chars().skip(2).collect::<String>());
     commit_path.push_str(".commit");
 
@@ -35,7 +44,7 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
                         // make tree with name tree name and create all files inside it
                         // Visit this tree in .vx/tree/
                         // println!("Tree: {}", tree_name);
-                        visit_tree(&tree_name, tree_hash)?;
+                        visit_tree(&tree_name, &tree_hash)?;
 
                     }
                     None => {
@@ -53,11 +62,11 @@ pub fn read_commit(commit: &String) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
+fn visit_tree(tree_name: &str, tree_hash: &String) -> Result<(), io::Error> {
     let mut tree_folder: String = ".vx/tree/".to_string();
     tree_folder.push_str(&tree_hash.chars().take(2).collect::<String>());
     let mut tree_folder_file = tree_folder.clone();
-    tree_folder_file.push_str("/");
+    tree_folder_file.push('/');
     tree_folder_file.push_str(&tree_hash.chars().skip(2).collect::<String>());
     tree_folder_file.push_str(".tree");
 
@@ -76,7 +85,7 @@ fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
                         if file_or_folder_name.starts_with("tree:") {
 
                             let folder_name = &file_or_folder_name[5..];
-                            visit_tree(&folder_name, file_or_folder_hash)?;
+                            visit_tree(folder_name, &file_or_folder_hash)?;
 
                         } else if file_or_folder_name.starts_with("file:") {
                         // Print the file name and then visit its hash
@@ -84,9 +93,9 @@ fn visit_tree(tree_name: &str, tree_hash: String) -> Result<(), io::Error> {
                         // visit_file
                             let file_name = &file_or_folder_name[5..];
                             let mut file_path = String::new();
-                            file_path.push_str(&tree_name);
-                            file_path.push_str("\\");
-                            file_path.push_str(&file_name);
+                            file_path.push_str(tree_name);
+                            file_path.push('\\');
+                            file_path.push_str(file_name);
                             // println!("File: {}", file_name);
                             // println!("File path: {}", file_path);
                             visit_file(&file_path, file_or_folder_hash)?;
@@ -112,7 +121,7 @@ fn visit_file(file_path: &str, file_hash: String) -> Result<(), io::Error> {
     let mut file_folder: String = ".vx/objects/".to_string();
     file_folder.push_str(&file_hash.chars().take(2).collect::<String>());
     let mut file_folder_file = file_folder.clone();
-    file_folder_file.push_str("/");
+    file_folder_file.push('/');
     file_folder_file.push_str(&file_hash.chars().skip(2).collect::<String>());
     file_folder_file.push_str(".hash");
 

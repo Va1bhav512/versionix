@@ -14,11 +14,12 @@ fn initialize() -> Result<(), io::Error> {
     let current_path = env::current_dir()?;
     println!("Current directory: {:?}", current_path);
     let mut commit = String::new();
-    // let path = current_path.join("\\test");
+    // let path = Path::new("D:\\test");
+    // println!("Current path: {:?}", path);
     let path = current_path;
     encrypt::visit_dirs(&path, &mut commit)?;
     encrypt::store_commit(&commit, "initial commit")?;
-    println!("The commit looks like this: {}", commit);
+    // println!("The commit looks like this: {}", commit);
     Ok(())
 
 }
@@ -26,11 +27,11 @@ fn initialize() -> Result<(), io::Error> {
 fn commit(message: &str) -> Result<(), io::Error> {
     let current_path = env::current_dir()?;
     let mut commit = String::new();
-    // let path = current_path.join("\\test");
+    // let path = Path::new("D:\\test");
     let path = current_path;
     encrypt::visit_dirs(&path, &mut commit)?;
-    encrypt::store_commit(&commit, &message)?;
-    println!("The commit looks like this: {}", commit);
+    encrypt::store_commit(&commit, message)?;
+    // println!("The commit looks like this: {}", commit);
     Ok(())
 }
 
@@ -80,12 +81,12 @@ fn main() {
             )
         )
         .get_matches();
-        if let Some(_) = cli.subcommand_matches("init") {
+        if cli.subcommand_matches("init").is_some() {
             match initialize() {
                 Ok(_) => println!("Successfully initialized!"),
                 Err(e) => eprintln!("Error creating directory! {}",e),
             }
-        } else if let Some(_) = cli.subcommand_matches("log") {
+        } else if cli.subcommand_matches("log").is_some() {
             match decrypt::read_commit_history() {
                 Ok(_) => println!("--End of history--"),
                 Err(e) => eprintln!("Error: {}", e),
@@ -99,7 +100,7 @@ fn main() {
             }
         } else if let Some(matches) = cli.subcommand_matches("commit") {
             if let Some(message) = matches.get_one::<String>("message") {
-                match commit(&message){
+                match commit(message){
                     Ok(_) => println!("Successfully commited"),
                     Err(e) => eprintln!("Error: {}", e),
                 }
